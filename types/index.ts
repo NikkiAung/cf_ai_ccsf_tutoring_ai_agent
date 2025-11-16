@@ -120,3 +120,10 @@ export interface ApiError {
   statusCode: number;
 }
 
+// Chat message type for chat sessions
+export interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+  tutorMatch?: MatchTutorResponse;
+}
+

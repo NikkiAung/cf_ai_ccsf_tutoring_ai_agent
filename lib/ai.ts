@@ -110,7 +110,7 @@ Return your response as JSON:
       throw new Error(`OpenAI API error: ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const data = await response.json() as { choices: Array<{ message: { content: string } }> };
     const content = JSON.parse(data.choices[0].message.content);
 
     // Find the matched tutor
@@ -238,7 +238,7 @@ function matchTutorSimple(
     );
   }
   if (request.time) {
-    availableSlots = availableSlots.filter((a) => a.time.includes(request.time));
+    availableSlots = availableSlots.filter((a) => a.time.includes(request.time!));
   }
   if (request.mode) {
     availableSlots = availableSlots.filter((a) => a.mode === request.mode);

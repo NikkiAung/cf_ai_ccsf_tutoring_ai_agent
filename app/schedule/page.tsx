@@ -18,7 +18,7 @@ export default function Schedule() {
         if (!response.ok) {
           throw new Error('Failed to fetch tutors');
         }
-        const data = await response.json();
+        const data = await response.json() as Tutor[];
         setTutors(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');

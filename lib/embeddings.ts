@@ -29,7 +29,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
         throw new Error(`OpenAI embeddings error: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as { data: Array<{ embedding: number[] }> };
       return data.data[0].embedding;
     } catch (error) {
       console.warn('OpenAI embeddings failed, trying Workers AI:', error);

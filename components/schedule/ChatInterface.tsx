@@ -1,22 +1,21 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { MatchTutorRequest, MatchTutorResponse } from '@/types';
+import type { MatchTutorRequest, MatchTutorResponse, Message, BookSessionResponse } from '@/types';
+import { ChatSessionClient, getSessionId } from '@/lib/chat-session-client';
 
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-  tutorMatch?: MatchTutorResponse;
-}
+const INITIAL_MESSAGE: Message = {
+  role: 'assistant',
+  content: "Hi! 👋 I'm your AI scheduling assistant for the CCSF CS Tutor Squad.\n\nI can help you:\n• Find the perfect tutor for your programming needs\n• Automatically book tutoring sessions\n• Match you with tutors based on your schedule and preferences\n\n**What programming languages or topics do you need help with?**\n\n💡 **Example prompts:**\n• \"I need help with Python\"\n• \"Looking for a Java tutor on Monday\"\n• \"Help with JavaScript, available Tuesday afternoon\"\n• \"Python tutor, online sessions preferred\"",
+};
 
 export default function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      content: "Hi! 👋 I'm your AI scheduling assistant for the CCSF CS Tutor Squad.\n\nI can help you:\n• Find the perfect tutor for your programming needs\n• Automatically book tutoring sessions\n• Match you with tutors based on your schedule and preferences\n\n**What programming languages or topics do you need help with?**\n\n💡 **Example prompts:**\n• \"I need help with Python\"\n• \"Looking for a Java tutor on Monday\"\n• \"Help with JavaScript, available Tuesday afternoon\"\n• \"Python tutor, online sessions preferred\"",
-    },
-  ]);
+  // Memoize sessionId and sessionClient to prevent recreating on every render
+  const sessionId = useMemo(() => getSessionId(), []);
+  const sessionClient = useMemo(() => new ChatSessionClient(sessionId), [sessionId]);
+  
+  const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [pendingMatch, setPendingMatch] = useState<MatchTutorResponse | null>(null);
@@ -34,11 +33,125 @@ export default function ChatInterface() {
     slot: { day: string; time: string; mode: string };
     step: 'name-email' | 'ccsf-email' | 'student-id' | 'allow-others' | 'classes' | 'specific-help' | 'additional-notes' | 'complete';
   } | null>(null);
+  const [isLoadingState, setIsLoadingState] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isSavingRef = useRef(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  // Load state from Durable Objects on mount (only once)
+  useEffect(() => {
+    let isMounted = true;
+    
+    async function loadState() {
+      try {
+        const state = await sessionClient.getState();
+        if (!isMounted) return; // Component unmounted, don't update state
+        
+        if (state) {
+          // Restore messages
+          if (state.messages && state.messages.length > 0) {
+            setMessages(state.messages);
+          } else {
+            // No messages in state, use initial message
+            setMessages([INITIAL_MESSAGE]);
+          }
+          // Restore pending match
+          if (state.pendingMatch) {
+            setPendingMatch(state.pendingMatch);
+          }
+          // Restore search criteria
+          if (state.lastSearchCriteria) {
+            setLastSearchCriteria(state.lastSearchCriteria);
+          }
+          // Restore available tutors
+          if (state.availableTutorsList && state.availableTutorsList.length > 0) {
+            setAvailableTutorsList(state.availableTutorsList);
+          }
+          // Restore booking info
+          if (state.bookingInfo) {
+            setBookingInfo(state.bookingInfo);
+          }
+        } else {
+          // Try loading just messages
+          const savedMessages = await sessionClient.getMessages();
+          if (!isMounted) return;
+          
+          if (savedMessages && savedMessages.length > 0) {
+            setMessages(savedMessages);
+          } else {
+            // No saved messages, use initial message
+            setMessages([INITIAL_MESSAGE]);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading chat state:', error);
+      } finally {
+        if (isMounted) {
+          setIsLoadingState(false);
+        }
+      }
+    }
+    
+    // Only load once on mount
+    if (isLoadingState) {
+      loadState();
+    }
+    
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Empty deps - only run once on mount
+
+  // Save state to Durable Objects when it changes (with debounce to prevent infinite loops)
+  useEffect(() => {
+    // Skip save if still loading initial state
+    if (isLoadingState) {
+      return;
+    }
+    
+    // Skip save if already saving
+    if (isSavingRef.current) {
+      return;
+    }
+
+    // Clear any pending save
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Debounce saves to prevent infinite loops (wait 1000ms after last change)
+    saveTimeoutRef.current = setTimeout(async () => {
+      // Double-check we're not already saving
+      if (isSavingRef.current || isLoadingState) return;
+      
+      isSavingRef.current = true;
+      try {
+        await sessionClient.updateState({
+          messages,
+          pendingMatch,
+          lastSearchCriteria,
+          availableTutorsList,
+          bookingInfo,
+        });
+      } catch (error) {
+        console.error('Error saving chat state:', error);
+      } finally {
+        isSavingRef.current = false;
+      }
+    }, 1000); // Debounce by 1000ms (1 second)
+
+    // Cleanup on unmount or when dependencies change
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+    };
+  }, [messages, pendingMatch, lastSearchCriteria, availableTutorsList, bookingInfo, isLoadingState]); // Removed sessionClient from deps
 
   useEffect(() => {
     scrollToBottom();
@@ -51,7 +164,13 @@ export default function ChatInterface() {
     const userMessage = input.trim().toLowerCase();
     const userMessageOriginal = input.trim();
     setInput('');
-    setMessages((prev) => [...prev, { role: 'user', content: userMessageOriginal }]);
+    
+    // Add user message and save to Durable Objects
+    const newUserMessage: Message = { role: 'user', content: userMessageOriginal };
+    setMessages((prev) => [...prev, newUserMessage]);
+    // Don't await - let the useEffect debounced save handle it
+    sessionClient.addMessage(newUserMessage).catch(console.error);
+    
     setIsLoading(true);
 
     try {
@@ -298,7 +417,7 @@ export default function ChatInterface() {
             throw new Error('Failed to book session');
           }
 
-          const bookResult = await bookResponse.json();
+          const bookResult = await bookResponse.json() as BookSessionResponse;
           
           if (bookResult.automationStatus === 'completed') {
             setMessages((prev) => [
@@ -396,7 +515,7 @@ export default function ChatInterface() {
         console.log('Response status:', response.status, response.ok);
         
         if (response.ok) {
-          const allMatches = await response.json();
+          const allMatches = await response.json() as MatchTutorResponse[];
           console.log('All matches received:', allMatches?.length, allMatches);
           
           if (!allMatches || !Array.isArray(allMatches) || allMatches.length === 0) {

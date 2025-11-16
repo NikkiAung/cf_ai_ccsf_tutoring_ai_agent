@@ -136,7 +136,7 @@ Availability: ${tutor.availability.map(a => `${a.day} ${a.time} (${a.mode})`).jo
               throw new Error(`OpenAI API error: ${embeddingResponse.statusText}`);
             }
 
-            const embeddingData = await embeddingResponse.json();
+            const embeddingData = await embeddingResponse.json() as { data: Array<{ embedding: number[] }> };
             const embedding = embeddingData.data[0].embedding;
 
             vectors.push({
