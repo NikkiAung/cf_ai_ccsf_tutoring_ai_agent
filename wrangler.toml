@@ -1,0 +1,36 @@
+# Cloudflare Workers configuration
+# For deploying the backend API to Cloudflare Workers
+
+name = "ccsf-tutoring-ai-agent"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "ccsf-tutoring-db"
+database_id = "5e1cd1a0-bef9-4496-acd5-025a316a6c4b"
+
+# Vectorize binding for RAG (Retrieval-Augmented Generation)
+# Create index: wrangler vectorize create ccsf-tutors-index --dimensions=1536 --metric=cosine
+[[vectorize]]
+binding = "VECTORIZE_INDEX"
+index_name = "ccsf-tutors-index"
+
+# Environment variables
+[vars]
+# Add your environment variables here
+# OPENAI_API_KEY will be set via wrangler secret put OPENAI_API_KEY
+
+# Secrets (set via: wrangler secret put OPENAI_API_KEY)
+# These are not stored in this file for security reasons
+
+# Build configuration
+[build]
+command = "npm run build"
+
+# Development configuration
+[dev]
+port = 8787
+local_protocol = "http"
+

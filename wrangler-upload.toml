@@ -1,0 +1,11 @@
+# Wrangler config for the upload embeddings worker
+
+name = "worker-upload-embeddings"
+main = "worker-upload-embeddings.ts"
+compatibility_date = "2024-01-01"
+
+# Vectorize binding
+[[vectorize]]
+binding = "VECTORIZE_INDEX"
+index_name = "ccsf-tutors-index"
+
