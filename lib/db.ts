@@ -162,13 +162,33 @@ export async function getTutorsBySkills(
   // Check if this is a mock database (has mockTutors property)
   if ('mockTutors' in db && typeof (db as any).mockTutors !== 'undefined') {
     const allTutors = (db as any).mockTutors as Tutor[];
-    const skillsLower = skills.map((s) => s.toLowerCase());
+    // Normalize skills for comparison (handle C++ specially)
+    const normalizedSkills = skills.map((s) => {
+      const normalized = s.toLowerCase().trim();
+      // Handle C++ variations
+      if (normalized === 'c++' || normalized === 'c\\+\\+' || normalized === 'cpp') {
+        return 'c++';
+      }
+      return normalized;
+    });
+    
     return allTutors.filter((tutor) =>
-      tutor.skills.some((skill) =>
-        skillsLower.some((req) =>
-          skill.toLowerCase().includes(req) || req.includes(skill.toLowerCase())
-        )
-      )
+      tutor.skills.some((skill) => {
+        const normalizedTutorSkill = skill.toLowerCase().trim();
+        // Handle C++ variations in tutor skills
+        const tutorSkillNormalized = normalizedTutorSkill === 'c++' || normalizedTutorSkill === 'c\\+\\+' || normalizedTutorSkill === 'cpp' 
+          ? 'c++' 
+          : normalizedTutorSkill;
+        
+        return normalizedSkills.some((req) => {
+          // Exact match for C++
+          if (req === 'c++' && tutorSkillNormalized === 'c++') {
+            return true;
+          }
+          // For other skills, use substring matching
+          return tutorSkillNormalized.includes(req) || req.includes(tutorSkillNormalized);
+        });
+      })
     );
   }
 

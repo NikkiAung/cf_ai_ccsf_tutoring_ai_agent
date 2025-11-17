@@ -13,18 +13,23 @@
     "prepare:cloudflare": "tsx scripts/upload-to-cloudflare-vectorize.ts"
   },
   "dependencies": {
+    "@langchain/core": "^1.0.5",
+    "@langchain/langgraph": "^1.0.2",
+    "@langchain/openai": "^1.1.1",
     "@radix-ui/react-slot": "^1.2.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "crawlee": "^3.15.3",
     "framer-motion": "^12.23.24",
+    "langchain": "^1.0.4",
     "lucide-react": "^0.553.0",
     "motion": "^12.23.24",
     "next": "16.0.2",
     "puppeteer": "^24.30.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20251115.0",
