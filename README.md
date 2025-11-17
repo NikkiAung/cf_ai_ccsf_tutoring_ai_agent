@@ -292,7 +292,7 @@ npm run build
 - [LangChain Integration](./LANGCHAIN_INTEGRATION.md) - LangChain features
 - [Durable Objects Setup](./DUrable_Objects_Setup_Guide.md) - State management
 - [Calendly Automation](./CALENDLY_AUTOMATION.md) - Booking automation
-- [Prompt Used](./PROMPTS.md) - Booking automation
+- [Prompt Used](./PROMPTS.md) - Prompt Used
 
 ## 🤝 Contributing
 
