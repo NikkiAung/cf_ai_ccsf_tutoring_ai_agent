@@ -90,6 +90,7 @@ Check out the full demo here: [Cloudflare AI Agent Demo](https://drive.google.co
 ```bash
 git clone https://github.com/NikkiAung/cf_ai_ccsf_tutoring_ai_agent.git
 cd cf_ai_ccsf_tutoring_ai_agent
+git checkout cloudfare-agent
 ```
 
 ### 2. Install Dependencies
